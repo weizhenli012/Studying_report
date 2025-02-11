@@ -1,0 +1,53 @@
+\section{预备知识}
+\subsection{VQ-VAE}
+自编码器（Auto Encoder, AE）是一种用来提取数据关键特征的自监督模型，它通过将高维的原始数据转化为
+低维的潜在特征（latent feature），再利用该特征解码复现原始数据。在图像自编码器模型中，原始图像
+通过一个 CNN 或 ViT 编码器模型得到低维潜在特征，再通过类似结构的解码器复现原始图像，损失函数为
+AE 模型输入和输出之间的均方误差（重建损失）。
+
+在自编码模型中，其不能生成训练数据集之外的新数据，变分自编码器（Variational Auto Encoder, VAE）
+通过假设特征向量服从某种分布规律从而可以从该分布中采样特征向量来生成新的数据。
+VAE 假设特征向量服从标准正态分布，编码器输出为均值和方差，解码器通过均值和方差采样重建输入，
+损失函数包括重建损失以及特征向量分布与标准正态分布之间的 KL 散度，其中采用重参数化使得
+采样过程可导，即：
+\begin{equation}
+    \bm{z}\sim\mathcal{N}(\bm{\mu},\bm{\sigma}^2)=\bm{\mu}+\bm{\sigma}\cdot\epsilon
+    \sim\mathcal{N}(0,1)=g(\epsilon).
+\end{equation}
+
+VAE 的潜在空间是连续的，使得生成的样本可能出现过度平滑、难以控制、缺乏足够细节的问题，
+VQ （vector quantization）技术通过对特征向量进行量化，通过聚类将连续的潜在空间离散化，
+从而高效控制特征的结构和表达分布，VQ-VAE 即是中间表示层为离散值的自编码器。
+VQ-VAE 量化模块引入了一个码本（codebook）存储离散的特征向量，每个特征向量有一个一一对应的
+索引，对于一个输入图像 $\bm{x}\in\mathbb{R}^{H\times W\times C}$，VQ-VAE 的工作流程如下：
+\begin{enumerate}
+    \item 通过编码器得到特征图：$\bm{z}_e=E(\bm{x})\in\mathbb{R}^{H\times W\times D}$；
+    \item 对于特征图中的每个位置，通过在码本中寻找最近邻，得到 $\bm{z}_q=Q(\bm{z}_e)\in\mathbb{R}^{H\times W\times D}$，
+    对于每个 $\bm{z}_q$， 存在一个索引矩阵与之对应；
+    \item 最后解码器将 $\bm{z}_q$ 作为输入重建原始图像，记输出为 $\hat{\bm{x}}=G(\bm{z}_q)\in\mathbb{R}^{H\times W\times 3}$。
+\end{enumerate}
+VQ-VAE 的损失函数包括重建损失以及码本学习损失，其中引入直通梯度估计（STE）来进行梯度传播，具体如下：
+\begin{align}
+    \mathcal{L}_{VQ-VAE}&=\mathcal{L}_{\text{recon}} + \beta\mathcal{L}_{\text{codebook}} + \gamma\mathcal{L}_{\text{commitment}},\\
+    \mathcal{L}_{\text{recon}}&=\|\bm{x}-G(\bm{z}_q)\|_2^2 = \|\bm{x}-G(\bm{z}_e + \text{sg}[\bm{z}_q-\bm{z}_e])\|_2^2,\\
+    \mathcal{L}_{\text{codebook}}&=\|\text{sg}[\bm{z}_e]-\bm{z}_q\|_2^2,\\
+    \mathcal{L}_{\text{commitment}}&=\|\bm{z}_e-\text{sg}[\bm{z}_q]\|_2^2.
+\end{align}
+其中 $\text{sg}$ 表示该项不计算梯度。
+
+\subsection{VQ-GAN}
+
+VQGAN 在 VQ-VAE 的基础上，增加了感知损失以及生成对抗损失加以改进模型。
+生成对抗模型 GAN 的损失函数为：
+$$
+\begin{cases}
+    \mathcal{L}_G=-\mathbb{E}_{z\sim p_z}[\log (D(G(z)))];\\
+    \mathcal{L}_D=-\mathbb{E}_{x\sim p_{\text{data}}}[\log (D(x))]-\mathbb{E}_{z\sim p_z}[\log (1-D(G(z)))].
+\end{cases} 
+$$
+VQGAN 的损失函数包括 VQ-VAE 的损失以及感知损失和生成对抗损失，具体如下：
+\begin{equation}
+    \mathcal{L}_{VQGAN}=\mathcal{L}_{VQ-VAE}+\alpha\mathcal{L}_{\text{perceptual}}+\lambda\mathcal{L}_{\text{GAN}}.
+\end{equation}
+其中感知损失表示从抽象的层次感知输入图像和重构图像之间的差异，具体为利用一些预训练好的模型（如 VGG等）提取图像的特征图，计算
+特征图之间的距离损失。

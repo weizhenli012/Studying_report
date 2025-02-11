@@ -1,0 +1,32 @@
+\section{基于 Actor 的直接策略梯度方法}
+对于采样的轨迹 episode $\tau^{n}$，policy gradient 方法即是采用梯度上升方法最大化期望回报：
+\begin{equation}
+    \text{maximize }\mathbb{E}_{\tau\sim p(\tau|\theta)}[R(\tau)] = \sum_{\tau} R(\tau)p(\tau|\theta)
+    %=\text{maximize }\frac{1}{N}\sum_{n=1}^{N}R(\tau^{n})
+    =\overline{R}_\theta.
+\end{equation}
+其中 $\theta$ 是待优化的参数，直接计算 $\overline{R}_\theta$ 的梯度：
+\begin{align}
+    \nabla_\theta\overline{R}_\theta = \sum_{\tau}R(\tau)p(\tau|\theta)\frac{\nabla p(\tau|\theta)}{p(\tau|\theta)}
+    = \frac{1}{N}\sum_{n=1}^{N} R(\tau^{n})\nabla\log (p(\tau^{n}|\theta)), 
+\end{align}
+由于
+\begin{align}
+    p(\tau|\theta) &= p(s_1)p(a_1|s_1,\theta)p(r_2,s_2|s_1,a_1)p(a_2|s_2,\theta)p(r_3,s_3|s_2,a_2) \cdots p(r_T,s_T|s_{T-1},a_{T-1})\\
+    &=p(s_1)\prod_{t=1}^{T-1}p(a_t|s_t,\theta)p(r_{t+1},s_{t+1}|s_t,a_t),
+\end{align}
+因此
+\begin{align}
+    \nabla \log (p(\tau|\theta)) &= \sum_{t=1}^{T-1} \nabla \log(p(a_t|s_t,\theta)),\\
+    \nabla \overline{R}_\theta &= \frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{T-1}R(\tau^{n}) \nabla \log(p(a_t^n|s_t^n,\theta)).
+\end{align}
+
+这里梯度上升的直接理解就是若 $R(\tau^n)$ 为正，则增加 $p(a_t^n|s_t^n,\theta)$ 的概率，相反若为负则减小；另一方面，
+即使 $R(\tau^n)$ 为正，但其中并不是每个行为策略都能导致 $R(\tau^n)$ 增加，因此有一些改进方法，如
+对每个行为策略，计算该动作起到结束的奖励和作为 return，即
+\begin{equation}\label{eq:actor gradient}
+    \nabla \overline{R}_\theta = \frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{T-1}(\sum_{t'=t}^{T}\gamma^{t'-t}r_{t'}^n-b) \nabla \log(p(a_t^n|s_t^n,\theta)).
+\end{equation}
+其中 $b$ 代表baseline，起到调整正负（策略相对好坏之分）、减小方差的作用，之后会引入优势函数（advantage function）。
+
+

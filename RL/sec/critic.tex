@@ -1,0 +1,60 @@
+\section{基于 critic 的 Q-learning 算法}
+Q-learning 是一种无模型（model-free）的强化学习算法
+属于基于值函数的方法。它通过学习一个 Q 值表来评估在特定状态下采取某个动作的长期期望回报，从而找到最优策略。
+Q-learning 的学习目标是一个最优的动作价值函数 $Q*(s, a)$，表示在状态 $s$ 下执行动作 $a$ 后，遵循最优策略所能获得的最大累积奖励，
+满足贝尔曼最优公式：
+\begin{equation}
+    Q*(s, a) = \mathbb{E} [r + \gamma \max_{a'} Q(s', a')|s,a],
+\end{equation}
+其中 $r$ 是即时奖励，$\gamma$ 是折扣因子，$s'$ 是下一个状态。
+
+在状态和动作有限的情况下，Q-learning 可以通过迭代更新 Q 值表来找到最优策略，利用时序差分（TD）方法更新 Q 值：
+\begin{equation}
+    Q(s, a) \leftarrow (1-\alpha) Q(s, a) + \alpha (r + \gamma \max_{a'} Q(s', a')-Q(s, a))
+\end{equation}
+其中 $\alpha$ 是学习率，控制更新的步长。但存在维度灾难以及不具备泛化能力，DQN 利用神经网络拟合 Q 值函数很好的
+解决了上述问题。
+
+\subsection{DQN}
+DQN 关键包括：
+\begin{enumerate}
+    \item \textbf{Q 函数} 状态 $s$ 和动作 $a$ 下的长期回报期望，用神经网络拟合得到。
+    \item \textbf{目标网络 Target Network} 用于估计目标 Q 值，与 Q 函数共享参数（定期更新），用于减少样本方差，
+    目标 Q 值为：
+    \begin{equation}
+        y = r + \gamma \max_{a'} Q_{\text{target}}(s', a').
+    \end{equation}
+    \item \textbf{经验回放 Experience Replay} 用于训练时从经验池中随机采样一批数据（优先回放重要性高的经验），提高样本利用率，减小过拟合。
+\end{enumerate}
+
+DQN 算法流程：
+\begin{enumerate}
+    \item 初始化 Q 函数和目标网络参数相同；
+    \item 与环境交互，存储经验 $(s,a,r,s')$ 到回放缓冲区；
+    \item 从回放缓冲区中随机采样一批数据 $(s,a,r,s')$，计算目标值 $y$；
+    \item 使用 Q 函数拟合 $(s,a,y)$，更新 Q 函数参数；
+    \item 定期更新目标网络参数。
+\end{enumerate}
+
+训练得到 Q 值后，更新策略为
+\begin{equation}
+    \pi(s) = \arg\max_{a} Q(s, a).
+\end{equation}
+当 $a$ 是连续时，可通过采样、对 $a$ 求导、修改网络架构等方式获得更新后的策略。
+另外，为增加探索能力，可采用 $\epsilon-greedy$ 策略，以一定概率 $\epsilon$ 随机选择动作，其余概率选择最优动作。
+
+DQN 的一些训练改进：
+\begin{enumerate}
+    \item \textbf{Double DQN} 解耦动作选择和目标 Q 值计算，缓解过度估计问题，即目标 Q 值计算如下：
+    \begin{equation}
+        y = r + \gamma Q_{\text{target}}(s', \arg\max_{a'} Q_{\pi}(s', a')).
+    \end{equation}
+    \item \textbf{Prioritized Experience Replay} 引入样本重要性，根据样本 TD 误差更新样本权重，提高样本利用率。
+    \item \textbf{Dueling Network} 利用两个网络分离状态值和动作优势值，提高学习效率。
+    \item \textbf{Noisy Network} 加入噪声，提高探索能力，具体为每次在和环境交互获取数据时，对每个参数添加随机噪声（如高斯噪声）以
+    提高探索性，比 $\epsilon-greedy$ 更有效。
+    \item \textbf{结合 MC 和 TD} 结合 Monte Carlo 和 TD 方法，利用 multi-step 策略，减小方差。
+\end{enumerate}
+
+
+

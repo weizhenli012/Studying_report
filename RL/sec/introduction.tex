@@ -1,0 +1,126 @@
+\section{RL 基础介绍}
+强化学习的核心是智能体（Agent）与环境（Environment）的交互学习框架，其基本要素包括：
+\begin{enumerate}%[leftmargin=2.5cm]
+  \item \textbf{状态（State）} 环境在时刻$t$的观测表示，记为$S_t \in \mathcal{S}$。例如：\\
+  - 机器人坐标 $(x,y)$ \\
+  - 棋盘局面的矩阵编码
+  
+  \item \textbf{动作（Action）} 智能体在状态$s$下的可执行操作，记为$A_t \in \mathcal{A}(s)$。例如：\\
+  - 离散动作：围棋的落子位置 \{上, 下, 左, 右\} \\
+  - 连续动作：机械臂关节扭矩 $[0, 1]^n$
+  
+  \item \textbf{奖励（Reward）} 环境对动作的即时反馈，记为$R_{t+1} \in \mathbb{R}$。例如：\\
+  - 游戏得分变化：$+1$（得分），$-10$（触碰障碍） \\
+  - 稀疏奖励：仅在任务完成时获得$+100$
+\end{enumerate}
+
+% ================================================
+\subsection{马尔可夫决策过程（MDP）}
+\textbf{马尔可夫性}：未来状态仅依赖当前状态与动作：
+\[
+P(S_{t+1}|S_t, A_t) = P(S_{t+1}|S_t, A_t, S_{t-1}, A_{t-1}, \dots).
+\]
+MDP五元组定义为：
+\[
+\langle \mathcal{S}, \mathcal{A}, P, R, \gamma \rangle:
+\]
+\begin{itemize}%[leftmargin=2.5cm]
+  \item $\mathcal{S}$ 状态空间（有限或无限集合）
+  \item $\mathcal{A}$ 动作空间（可能依赖状态$s$）
+  \item $P(s'|s,a)$ 状态转移概率：$\sum_{s'} P(s'|s,a) = 1$
+  \item $R(s,a,s')$ 奖励函数（可简化为$R(s,a)$或$R(s)$）
+  \item $\gamma$ 折扣因子：$\gamma=0$只关注即时奖励，$\gamma \to 1$强调长期回报
+\end{itemize}
+
+强化学习的目标即是在此框架下最大化\textbf{累积折扣奖励}：
+\begin{equation}
+  G_t = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}
+\end{equation}
+优化策略$\pi(a|s)$以最大化期望回报$\mathbb{E}_\pi[G_t]$。
+
+% ================================================
+\subsection{价值函数与贝尔曼方程}
+\subsubsection{状态价值函数（State-Value Function）}
+策略$\pi$下状态$s$的长期价值，定义为从$s$出发的期望回报：
+\[
+V^\pi(s) = \mathbb{E}_\pi \left[ G_t \mid S_t = s \right]
+\]
+其中累积回报：
+\[
+G_t = \sum_{k=0}^\infty \gamma^k R_{t+k+1}
+\]
+
+\subsubsection{动作价值函数（Action-Value Function）}
+在状态$s$采取动作$a$后遵循策略$\pi$的期望回报：
+\[
+Q^\pi(s,a) = \mathbb{E}_\pi \left[ G_t \mid S_t = s, A_t = a \right]
+\]
+
+\subsubsection{贝尔曼方程（Bellman Equation）}
+价值函数的递归分解：
+\[
+V^\pi(s) = \sum_{a} \pi(a|s) \sum_{s'} P(s'|s,a) \left[ R(s,a,s') + \gamma V^\pi(s') \right]
+\]
+\[
+Q^\pi(s,a) = \sum_{s'} P(s'|s,a) \left[ R(s,a,s') + \gamma \sum_{a'} \pi(a'|s') Q^\pi(s',a') \right]
+\]
+
+\subsubsection{最优价值函数}
+存在最优策略$\pi^*$使得：
+\[
+V^*(s) = \max_\pi V^\pi(s), \quad Q^*(s,a) = \max_\pi Q^\pi(s,a)
+\]
+满足贝尔曼最优方程：
+\[
+V^*(s) = \max_{a} \sum_{s'} P(s'|s,a) \left[ R(s,a,s') + \gamma V^*(s') \right]
+\]
+\[
+Q^*(s,a) = \sum_{s'} P(s'|s,a) \left[ R(s,a,s') + \gamma \max_{a'} Q^*(s',a') \right]
+\]
+
+% ================================================
+\subsection{强化学习方法分类}
+\begin{table}[htbp]
+  \centering
+  \caption{强化学习方法对比}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{方法类型} & \textbf{策略表示} & \textbf{更新目标} \\
+    \midrule
+    基于值函数（Critic） & 隐式（如$\epsilon$-greedy） & 逼近$Q^*(s,a)$ \\
+    基于策略（Actor） & 显式$\pi_\theta(a|s)$ & 最大化$J(\theta) = \mathbb{E}[G_t]$ \\
+    Actor-Critic & 显式策略 + 值函数 & 策略梯度+值函数引导 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{基于值函数的方法}
+通过优化值函数间接改进策略，例如：
+\begin{itemize}
+  \item 动态规划（DP）：迭代计算$V^\pi(s)$
+  \item 蒙特卡洛（MC）：采样轨迹估计$Q^\pi(s,a)$
+  \item 时序差分（TD）：结合DP与MC，如Q-learning：
+  \[
+  Q(s,a) \leftarrow Q(s,a) + \alpha \left[ R + \gamma \max_{a'} Q(s',a') - Q(s,a) \right]
+  \]
+\end{itemize}
+
+\subsubsection{基于策略的方法}
+直接参数化策略并通过梯度上升优化：
+\[
+J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^\infty \gamma^t R_t \right]
+\]
+梯度计算公式：
+\[
+\nabla_\theta J(\theta) = \mathbb{E} \left[ \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t) G_t \right]
+\]
+
+\subsubsection{Actor-Critic框架}
+\begin{itemize}
+  \item \textbf{Actor}：策略$\pi_\theta(a|s)$，通过策略梯度更新
+  \item \textbf{Critic}：值函数$V_w(s)$或$Q_w(s,a)$，通过TD误差更新
+  \item 优势函数（Advantage Function）减少方差：
+  \[
+  A(s,a) = Q(s,a) - V(s) \implies \nabla_\theta J(\theta) = \mathbb{E} \left[ \nabla_\theta \log \pi_\theta(a|s) A(s,a) \right]
+  \]
+\end{itemize}

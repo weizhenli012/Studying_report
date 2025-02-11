@@ -1,0 +1,41 @@
+\section{Actor-Critic 混合方法}
+Actor-Critic 是结合了策略梯度（Policy Gradient） 和 值函数（Value Function） 的混合架构：
+\begin{enumerate}
+    \item Actor（策略网络）：负责生成动作，直接优化策略函数 $\pi_{\theta}(a|s;\theta)$，使得策略函数的期望回报最大化；
+    \item Critic（价值网络）：评估状态或动作的价值，通过 $V(s;\phi)$ 或 $Q(s,a;\phi)$ 计算。
+\end{enumerate}
+
+在直接策略梯度算法中，方程~\ref{eq:actor gradient} 中
+\begin{equation}
+    G_t^n - b = \sum_{t'=t}^{T}\gamma^{t'-t}r_{t'}^n-b,
+\end{equation}
+其具有不稳定性，方差大，因此可利用价值网络估计的期望值进行修正，有
+\begin{equation}
+    \mathbb{E}(G_t^n) = Q^{\pi_{\theta}}(s_t^n,a_t^n),\quad \text{baseline} = V^{\pi_{\theta}}(s_t^n);
+\end{equation}
+另外，
+\begin{align}
+    &Q^{\pi_{\theta}}(s_t^n,a_t^n) - V^{\pi_{\theta}}(s_t^n) \\
+    &=\mathbb{E}(r_t^n + \gamma V^{\pi_{\theta}}(s_{t+1}^n) - V^{\pi_{\theta}}(s_t^n))\\
+    &= r_t^n + \gamma V^{\pi_{\theta}}(s_{t+1}^n) - V^{\pi_{\theta}}(s_t^n).
+\end{align}
+以上即是 advantage function，即在策略梯度算法中，用价值网络估计的期望回报与当前状态的价值对
+蒙特卡洛方法的估计值进行修正，从而减少方差。
+
+训练过程中，可通过正则化项使得策略网络的输出分布熵更大以增加探索性。
+另外，对于动作连续的情景，可以采用 Pathwise derivative policy gradient 方法使用确定性策略优化，
+具体的网络结果中，actor 网络的输入为状态，输出为动作，critic 网络的输入为 actor 网络的输出，
+训练 actor 网络即是使得 critic 网络值最大化，类似于 GAN 的思想，具体训练流程如下：
+\begin{enumerate}
+    \item 初始化主网络 actor $\pi_{\theta}$ 和 critic $Q_{\phi}$ 和目标网络 actor $\pi_{\theta^-}$ 和 critic $Q_{\phi^-}$；
+    \item 使用当前策略进行环境交互采样数据（可添加噪声增加探索性），存储到回放缓冲区；
+    \item 最小化 TD 误差更新 critic 网络：
+        \begin{equation}
+            L(\phi) = \mathbb{E}\left[(r+\gamma Q_{\phi^-}(s',\pi_{\theta^-}(s')) - Q_{\phi}(s,a))^2\right].
+        \end{equation}
+    \item 沿 $Q_{\phi}$ 梯度方向更新 actor 网络：
+        \begin{equation}
+            L(\theta) = \mathbb{E}(Q_{\phi}(s,\pi_{\theta}(s))).
+        \end{equation}
+    \item 训练几步后更新目标网络。
+\end{enumerate}

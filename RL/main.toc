@@ -1,0 +1,18 @@
+\contentsline {chapter}{\numberline {1}LLMs 的强化学习基础}{2}%
+\contentsline {section}{\numberline {1.1}RL 基础介绍}{2}%
+\contentsline {subsection}{\numberline {1.1.1}马尔可夫决策过程（MDP）}{2}%
+\contentsline {subsection}{\numberline {1.1.2}价值函数与贝尔曼方程}{3}%
+\contentsline {subsubsection}{状态价值函数（State-Value Function）}{3}%
+\contentsline {subsubsection}{动作价值函数（Action-Value Function）}{3}%
+\contentsline {subsubsection}{贝尔曼方程（Bellman Equation）}{3}%
+\contentsline {subsubsection}{最优价值函数}{3}%
+\contentsline {subsection}{\numberline {1.1.3}强化学习方法分类}{3}%
+\contentsline {subsubsection}{基于值函数的方法}{4}%
+\contentsline {subsubsection}{基于策略的方法}{4}%
+\contentsline {subsubsection}{Actor-Critic框架}{4}%
+\contentsline {section}{\numberline {1.2}基于 Actor 的直接策略梯度方法}{4}%
+\contentsline {section}{\numberline {1.3}基于 critic 的 Q-learning 算法}{5}%
+\contentsline {subsection}{\numberline {1.3.1}DQN}{5}%
+\contentsline {section}{\numberline {1.4}Actor-Critic 混合方法}{6}%
+\contentsline {section}{\numberline {1.5}PPO: Proximal Policy Optimization}{7}%
+\contentsline {section}{\numberline {1.6}GRPO: Group Relative Policy Optimization}{8}%
